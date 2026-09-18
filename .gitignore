@@ -1,0 +1,6 @@
+node_modules/
+npm-debug.log*
+.DS_Store
+.env
+.env.*
+union_alpha_autonomous_build_prompt.md

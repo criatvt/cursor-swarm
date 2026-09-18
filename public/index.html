@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cursor Swarm</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2032%2032%27%3E%3Cpolygon%20points%3D%276%2C4%206%2C27%2012%2C22%2016%2C29%2020%2C27%2016%2C20%2024%2C20%27%20fill%3D%27%2322e6ff%27%20stroke%3D%27%2305070d%27%20stroke-width%3D%271.5%27%20stroke-linejoin%3D%27round%27%2F%3E%3C%2Fsvg%3E">
+</head>
+<body>
+  <canvas id="arena" aria-label="Shared puzzle arena. Move your cursor to cooperate; click stars and hold the core."></canvas>
+  <div id="scanlines" aria-hidden="true"></div>
+  <div id="vignette" aria-hidden="true"></div>
+
+  <div id="banner" class="banner hidden" aria-live="polite"></div>
+
+  <header id="topbar" class="hud">
+    <div class="brand">CURSOR // SWARM</div>
+    <div class="pips" id="pips"></div>
+    <div class="meta">
+      <span id="cycle-label">CYCLE 1</span>
+      <span id="player-count">0 ACTIVE</span>
+    </div>
+  </header>
+
+  <section id="objective" class="hud" aria-live="polite">
+    <div class="obj-title" id="obj-title">STANDBY</div>
+    <div class="obj-text" id="obj-text">Awaiting swarm signals…</div>
+    <div class="ticker" id="ticker" role="progressbar" aria-label="Stage progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="ticker-fill" id="ticker-fill"></div></div>
+    <div class="obj-hint" id="obj-hint"></div>
+  </section>
+
+  <section id="gm" class="hud" aria-live="polite">
+    <div class="gm-title">GAME MASTER</div>
+    <ul id="gm-log"></ul>
+  </section>
+
+  <section id="stage-readout" class="hud mono" aria-live="polite"></section>
+
+  <div id="controls" class="hud">
+    <button id="btn-sound" type="button" aria-pressed="true">SOUND: ON</button>
+    <button id="btn-reset" type="button" title="R">RESET</button>
+  </div>
+
+  <div id="keypad" class="hud hidden" aria-label="code keypad">
+    <div class="keypad-display mono" id="keypad-display">----</div>
+    <div class="keypad-grid">
+      <button type="button" data-digit="1">1</button>
+      <button type="button" data-digit="2">2</button>
+      <button type="button" data-digit="3">3</button>
+      <button type="button" data-digit="4">4</button>
+      <button type="button" data-digit="5">5</button>
+      <button type="button" data-digit="6">6</button>
+      <button type="button" data-digit="7">7</button>
+      <button type="button" data-digit="8">8</button>
+      <button type="button" data-digit="9">9</button>
+      <button type="button" data-digit="del">DEL</button>
+      <button type="button" data-digit="0">0</button>
+      <button type="button" data-digit="enter">ENTER</button>
+    </div>
+    <div class="keypad-status mono" id="keypad-status"></div>
+  </div>
+
+  <section id="launch" class="overlay" aria-labelledby="launch-title">
+    <div class="overlay-panel launch-panel">
+      <p class="launch-eyebrow mono">FIVE PUZZLES. ONE TEAM.</p>
+      <h1 id="launch-title">Your cursor is<br>your character.</h1>
+      <p class="launch-purpose">Work together to solve 5 puzzles and overload the core.</p>
+      <p>Move to cooperate; click or hold when prompted.<br>No score, no opponents—everyone wins together.</p>
+      <div class="launch-first">
+        <h2>First puzzle: The Gathering</h2>
+        <p>Move into the glowing circle and stay there. When at least 75% of the swarm stays inside for 3 seconds, the progress ring fills and you advance.</p>
+      </div>
+      <p class="launch-start">Start here: invite friends to join the swarm.</p>
+      <div class="launch-actions">
+        <button id="launch-friends" type="button">Join with Friends</button>
+      </div>
+      <p class="launch-note">Share this page’s address. You’ll enter the revealed code and hold the final core.</p>
+    </div>
+  </section>
+
+  <div id="standby" class="overlay">
+    <div class="overlay-panel">
+      <h2 id="connection-title">CONNECTING</h2>
+      <p id="connection-copy">Establishing a shared signal…</p>
+      <p class="mono dim">Share the link to grow the swarm.</p>
+      <div class="overlay-count mono" id="standby-count">0 / 3</div>
+    </div>
+  </div>
+
+  <div id="victory" class="overlay hidden">
+    <div class="overlay-panel victory-panel">
+      <h2 class="victory-title">SWARM ASCENDED</h2>
+      <dl class="victory-stats mono">
+        <div><dt>TIME</dt><dd id="v-time">—</dd></div>
+        <div><dt>CLICKS</dt><dd id="v-clicks">—</dd></div>
+        <div><dt>PEAK SWARM</dt><dd id="v-peak">—</dd></div>
+      </dl>
+      <div class="victory-countdown mono" id="v-countdown"></div>
+    </div>
+  </div>
+
+  <div id="toast" class="mono" aria-live="polite"></div>
+
+  <footer id="site-footer" class="mono">
+    Built by <a href="https://aasifj.com" target="_blank" rel="noopener noreferrer">Aasif Iqbal J</a> · V0.1.0
+  </footer>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/audio.js"></script>
+  <script src="/js/render.js"></script>
+  <script src="/js/ui.js"></script>
+  <script src="/js/main.js"></script>
+</body>
+</html>
