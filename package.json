@@ -2,26 +2,26 @@
   "name": "cursor-swarm",
   "version": "0.1.0",
   "description": "CURSOR//SWARM — a real-time anonymous cooperative multiplayer cursor puzzle game.",
-  "main": "server.js",
+  "main": "src/worker.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch server.js",
+    "start": "wrangler dev",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
     "test": "node --test",
-    "check": "node --check server.js && node --check game.js && node --check bots.js && node --check gamemaster.js && node --check public/js/audio.js && node --check public/js/render.js && node --check public/js/ui.js && node --check public/js/main.js"
+    "check": "node --check net.js && node --check game.js && node --check bots.js && node --check gamemaster.js && node --check public/js/audio.js && node --check public/js/render.js && node --check public/js/ui.js && node --check public/js/main.js && node --check public/js/socket-shim.js"
   },
   "engines": {
     "node": ">=16"
   },
   "keywords": [
     "multiplayer",
-    "socket.io",
+    "websocket",
     "canvas",
     "game",
     "real-time"
   ],
   "license": "MIT",
-  "dependencies": {
-    "express": "^4.19.2",
-    "socket.io": "^4.7.5"
+  "devDependencies": {
+    "wrangler": "^4.134.0"
   }
 }

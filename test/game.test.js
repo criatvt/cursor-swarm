@@ -2,9 +2,8 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const http = require('node:http');
 const { Game, WORLD, GATHER, CORE, TARGETS, FOG, MAX_HUMANS, TRANSITION_MS } = require('../game');
-const { createServer, createLimiter, sameHost } = require('../server');
+const { createLimiter, sameHost } = require('../net');
 
 function setup(n = 3) {
   let time = 100000;
@@ -416,12 +415,12 @@ test('equilibrium bots keep stable sides and account for humans', () => {
 });
 
 test('same-host origin validation and refillable per-event rate limits', () => {
-  const req = (origin, host = 'localhost:3000') => ({ headers: { host, ...(origin === undefined ? {} : { origin }) } });
-  assert.equal(sameHost(req(undefined)), true);
-  assert.equal(sameHost(req('http://localhost:3000')), true);
-  assert.equal(sameHost(req('https://example.com', 'example.com')), true);
+  const host = 'localhost:3000';
+  assert.equal(sameHost(undefined, host), true);
+  assert.equal(sameHost('http://localhost:3000', host), true);
+  assert.equal(sameHost('https://example.com', 'example.com'), true);
   for (const origin of ['null', 'https://evil.test', 'http://localhost:3001', 'http://localhost:3000/path', 'file://localhost:3000', 'bad']) {
-    assert.equal(sameHost(req(origin)), false);
+    assert.equal(sameHost(origin, host), false);
   }
   let now = 0;
   const allow = createLimiter(() => now);
@@ -436,56 +435,8 @@ test('same-host origin validation and refillable per-event rate limits', () => {
   assert.equal(allow('move'), true);
 });
 
-function request(port, path, { method = 'GET', headers = {}, body } = {}) {
-  return new Promise((resolve, reject) => {
-    const req = http.request({ hostname: '127.0.0.1', port, path, method, headers, timeout: 2000 }, res => {
-      let data = '';
-      res.setEncoding('utf8');
-      res.on('data', chunk => { data += chunk; });
-      res.on('end', () => resolve({ status: res.statusCode, headers: res.headers, body: data }));
-    });
-    req.on('error', reject);
-    req.on('timeout', () => req.destroy(new Error('Request timed out')));
-    req.end(body);
-  });
-}
-
-test('HTTP health, security headers, Socket.IO contract, rejected origin and graceful close', async t => {
-  const runtime = createServer();
-  t.after(() => runtime.close());
-  await new Promise(resolve => runtime.server.listen(0, '127.0.0.1', resolve));
-  const port = runtime.server.address().port;
-  const health = await request(port, '/health');
-  assert.equal(health.status, 200);
-  assert.equal(JSON.parse(health.body).ok, true);
-  assert.match(health.headers['content-security-policy'], /script-src 'self'/);
-  assert.equal(health.headers['x-content-type-options'], 'nosniff');
-  assert.equal(health.headers['x-powered-by'], undefined);
-  const endpoint = '/socket.io/?EIO=4&transport=polling';
-  const rejected = await request(port, endpoint, { headers: { Origin: 'https://evil.test' } });
-  assert.equal(rejected.status, 403);
-  const handshake = await request(port, endpoint, { headers: { Origin: `http://127.0.0.1:${port}` } });
-  assert.equal(handshake.status, 200);
-  const sid = JSON.parse(handshake.body.slice(1)).sid;
-  const session = `${endpoint}&sid=${encodeURIComponent(sid)}`;
-  const send = body => request(port, session, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body });
-  await send('40');
-  const connected = await request(port, session);
-  const packets = connected.body.split('\x1e').filter(p => p.startsWith('42')).map(p => JSON.parse(p.slice(2)));
-  const welcome = packets.find(([event]) => event === 'welcome');
-  assert.ok(welcome[1].id);
-  assert.ok(packets.some(([event, payload]) => event === 'state' && payload.phase === 'waiting'));
-  await send('42["move",{"x":600,"y":350}]');
-  assert.equal(runtime.game.players.get(welcome[1].id).x, 600);
-  await send('42["code","1234"]');
-  const codePackets = (await request(port, session)).body;
-  assert.match(codePackets, /code:result/);
-  await send('42["demo"]');
-  assert.equal(runtime.game.players.size, 11);
-  await send('42["reset"]');
-  assert.equal(runtime.game.players.size, 11);
-  await send('41');
-  assert.equal(runtime.game.players.size, 0);
-  await runtime.close();
-  assert.equal(runtime.server.listening, false);
-});
+// The Node HTTP/Socket.IO transport was retired in favor of Cloudflare Workers +
+// Durable Objects (see src/worker.js, src/swarm.js). The WebSocket upgrade, security
+// headers, origin rejection, and graceful shutdown behavior are covered by manual and
+// integration verification (wrangler dev / wrangler deploy --dry-run) instead of a
+// Node-level HTTP test here.

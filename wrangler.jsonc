@@ -1,0 +1,10 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cursor-swarm",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-09-01",
+  "assets": { "directory": "./public", "binding": "ASSETS", "run_worker_first": true },
+  "durable_objects": { "bindings": [{ "name": "SWARM", "class_name": "Swarm" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Swarm"] }],
+  "observability": { "enabled": true }
+}
